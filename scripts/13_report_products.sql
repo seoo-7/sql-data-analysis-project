@@ -20,12 +20,6 @@ Highlights:
        - average monthly revenue
 ===============================================================================
 */
--- =============================================================================
--- Create Report: gold.report_products
--- =============================================================================
-IF OBJECT_ID('gold.report_products', 'V') IS NOT NULL
-    DROP VIEW gold.report_products;
-GO
 
 CREATE VIEW gold.report_products AS
 
@@ -33,8 +27,8 @@ WITH base_query AS (
 /*---------------------------------------------------------------------------
 1) Base Query: Retrieves core columns from fact_sales and dim_products
 ---------------------------------------------------------------------------*/
-    SELECT
-	    f.order_number,
+SELECT
+        f.order_number,
         f.order_date,
 		f.customer_key,
         f.sales_amount,
@@ -43,11 +37,11 @@ WITH base_query AS (
         p.product_name,
         p.category,
         p.subcategory,
-        p.cost
-    FROM gold.fact_sales f
-    LEFT JOIN gold.dim_products p
-        ON f.product_key = p.product_key
-    WHERE order_date IS NOT NULL  -- only consider valid sales dates
+        p.cost 
+FROM gold.fact_sales f
+LEFT JOIN gold.dim_products p
+ON f.product_key = p.product_key
+WHERE order_date IS NOT NULL  -- only consider valid sales dates
 ),
 
 product_aggregations AS (

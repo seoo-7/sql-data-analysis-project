@@ -1,78 +1,112 @@
-/*
-===============================================================================
-Ranking Analysis
-===============================================================================
-Purpose:
-    - To rank items (e.g., products, customers) based on performance or other metrics.
-    - To identify top performers or laggards.
 
-SQL Functions Used:
-    - Window Ranking Functions: RANK(), DENSE_RANK(), ROW_NUMBER(), TOP
-    - Clauses: GROUP BY, ORDER BY
-===============================================================================
-*/
+--RANKING 
 
--- Which 5 products Generating the Highest Revenue?
--- Simple Ranking
-SELECT TOP 5
-    p.product_name,
-    SUM(f.sales_amount) AS total_revenue
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_products p
-    ON p.product_key = f.product_key
-GROUP BY p.product_name
-ORDER BY total_revenue DESC;
+-- find the top 10 customers who have generate the highest revenue
+SELECT	TOP 10
+	C.customer_key,
+	CONCAT(C.first_name ,' ',C.last_name) AS full_name,
+	SUM(F.sales_amount) AS total_revenue,
+	COUNT(DISTINCT f.order_number ) AS total_order
+FROM gold.fact_sales F 
+LEFT JOIN gold.dim_customers C
+ON F.customer_key = C.customer_key
+GROUP BY 
+	C.customer_key,
+	CONCAT(C.first_name ,' ',C.last_name)	
+ORDER BY total_revenue DESC 
 
--- Complex but Flexibly Ranking Using Window Functions
+--which the 5 products generate the highest revenue
+
 SELECT *
 FROM (
-    SELECT
-        p.product_name,
-        SUM(f.sales_amount) AS total_revenue,
-        RANK() OVER (ORDER BY SUM(f.sales_amount) DESC) AS rank_products
-    FROM gold.fact_sales f
-    LEFT JOIN gold.dim_products p
-        ON p.product_key = f.product_key
-    GROUP BY p.product_name
-) AS ranked_products
-WHERE rank_products <= 5;
+	SELECT 
+		P.product_name,
+		SUM(F.sales_amount) AS total_revenue,
+		ROW_NUMBER() OVER(ORDER BY SUM(F.sales_amount) DESC ) AS rank_product
+	FROM gold.fact_sales F
+	LEFT JOIN gold.dim_products P
+	ON F.product_key = P.product_key
+	GROUP BY product_name ) Q
+WHERE rank_product <= 5
 
--- What are the 5 worst-performing products in terms of sales?
-SELECT TOP 5
-    p.product_name,
-    SUM(f.sales_amount) AS total_revenue
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_products p
-    ON p.product_key = f.product_key
-GROUP BY p.product_name
-ORDER BY total_revenue;
+-- OR 
+SELECT TOP 5 
+	P.product_name,
+	SUM(F.sales_amount) AS total_revenue
+FROM gold.fact_sales F
+LEFT JOIN gold.dim_products P
+ON F.product_key = P.product_key
+GROUP BY product_name
+ORDER BY total_revenue DESC
 
--- Find the top 10 customers who have generated the highest revenue
-SELECT TOP 10
-    c.customer_key,
-    c.first_name,
-    c.last_name,
-    SUM(f.sales_amount) AS total_revenue
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_customers c
-    ON c.customer_key = f.customer_key
-GROUP BY 
-    c.customer_key,
-    c.first_name,
-    c.last_name
-ORDER BY total_revenue DESC;
+-- find are the 5 worest-performing products in term of sales 
+SELECT *
+FROM (
+	SELECT 
+		P.product_name,
+		SUM(F.sales_amount) AS total_revenue,
+		ROW_NUMBER() OVER(ORDER BY SUM(F.sales_amount)  ) AS rank_product
+	FROM gold.fact_sales F
+	LEFT JOIN gold.dim_products P
+	ON F.product_key = P.product_key
+	GROUP BY product_name ) Q
+WHERE rank_product <= 5
 
--- The 3 customers with the fewest orders placed
-SELECT TOP 3
-    c.customer_key,
-    c.first_name,
-    c.last_name,
-    COUNT(DISTINCT order_number) AS total_orders
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_customers c
-    ON c.customer_key = f.customer_key
-GROUP BY 
-    c.customer_key,
-    c.first_name,
-    c.last_name
-ORDER BY total_orders ;
+-- OR
+SELECT TOP 5 
+	P.product_name,
+	SUM(F.sales_amount) AS total_revenue
+FROM gold.fact_sales F
+LEFT JOIN gold.dim_products P
+ON F.product_key = P.product_key
+GROUP BY product_name
+ORDER BY total_revenue ASC
+	
+
+--which the 5 subcategory generate the highest revenue
+SELECT *
+FROM (
+	SELECT 
+	    P.subcategory,
+		SUM(F.sales_amount) AS total_revenue,
+		ROW_NUMBER() OVER(ORDER BY SUM(F.sales_amount) DESC ) AS rank_product
+	FROM gold.fact_sales F
+	LEFT JOIN gold.dim_products P
+	ON F.product_key = P.product_key
+	GROUP BY subcategory ) Q
+WHERE rank_product <= 5 
+
+-- OR 
+SELECT TOP 5 
+	P.subcategory,
+	SUM(F.sales_amount) AS total_revenue
+FROM gold.fact_sales F
+LEFT JOIN gold.dim_products P
+ON F.product_key = P.product_key
+GROUP BY subcategory
+ORDER BY total_revenue DESC
+
+
+-- find are the 5 worest-performing subcategory in term of sales 
+SELECT *
+FROM (
+	SELECT 
+	    P.subcategory,
+		SUM(F.sales_amount) AS total_revenue,
+		ROW_NUMBER() OVER(ORDER BY SUM(F.sales_amount) ASC ) AS rank_product
+	FROM gold.fact_sales F
+	LEFT JOIN gold.dim_products P
+	ON F.product_key = P.product_key
+	GROUP BY subcategory ) Q
+WHERE rank_product <= 5 
+
+-- OR 
+SELECT TOP 5 
+	P.subcategory,
+	SUM(F.sales_amount) AS total_revenue
+FROM gold.fact_sales F
+LEFT JOIN gold.dim_products P
+ON F.product_key = P.product_key
+GROUP BY subcategory
+ORDER BY total_revenue ASC
+	

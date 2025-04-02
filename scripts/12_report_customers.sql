@@ -20,87 +20,77 @@ Highlights:
 		- average monthly spend
 ===============================================================================
 */
-
--- =============================================================================
--- Create Report: gold.report_customers
--- =============================================================================
-IF OBJECT_ID('gold.report_customers', 'V') IS NOT NULL
-    DROP VIEW gold.report_customers;
-GO
-
-CREATE VIEW gold.report_customers AS
-
-WITH base_query AS(
-/*---------------------------------------------------------------------------
-1) Base Query: Retrieves core columns from tables
----------------------------------------------------------------------------*/
-SELECT
-f.order_number,
-f.product_key,
-f.order_date,
-f.sales_amount,
-f.quantity,
-c.customer_key,
-c.customer_number,
-CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
-DATEDIFF(year, c.birthdate, GETDATE()) age
-FROM gold.fact_sales f
-LEFT JOIN gold.dim_customers c
-ON c.customer_key = f.customer_key
+CREATE VIEW gold.report_customer AS 
+WITH base_query AS (
+--1)BASE QUERY : retreive core column from tables 
+SELECT 
+	s.order_number,
+	s.product_key,
+	s.order_date,
+	s.sales_amount,
+	s.quantity,
+	c.customer_key,
+	c.customer_number,
+	CONCAT(c.first_name,' ' , c.last_name) AS custmers_names,
+	DATEDIFF(year,c.birthdate,GETDATE()) AS age 
+FROM gold.fact_sales s
+LEFT JOIN gold.dim_customers  c
+ON s.customer_key = c.customer_key
 WHERE order_date IS NOT NULL)
 
-, customer_aggregation AS (
-/*---------------------------------------------------------------------------
-2) Customer Aggregations: Summarizes key metrics at the customer level
----------------------------------------------------------------------------*/
+,customer_aggregation AS (
+-- 2) customer aggergation : summarize key metrics at the customer level
 SELECT 
 	customer_key,
 	customer_number,
-	customer_name,
+	custmers_names,
 	age,
-	COUNT(DISTINCT order_number) AS total_orders,
+	COUNT(DISTINCT order_number) AS total_order,
 	SUM(sales_amount) AS total_sales,
 	SUM(quantity) AS total_quantity,
-	COUNT(DISTINCT product_key) AS total_products,
-	MAX(order_date) AS last_order_date,
-	DATEDIFF(month, MIN(order_date), MAX(order_date)) AS lifespan
+	COUNT(product_key) AS total_product,
+	MIN(order_date) AS first_order ,
+	MAX(order_date) AS last_order,
+	DATEDIFF(month,MIN(order_date),MAX(order_date) ) AS lifespan
 FROM base_query
-GROUP BY 
+GROUP BY customer_key,
+	customer_number,
+	custmers_names,
+	age ) 
+
+SELECT 
 	customer_key,
 	customer_number,
-	customer_name,
-	age
-)
-SELECT
-customer_key,
-customer_number,
-customer_name,
-age,
-CASE 
-	 WHEN age < 20 THEN 'Under 20'
-	 WHEN age between 20 and 29 THEN '20-29'
-	 WHEN age between 30 and 39 THEN '30-39'
-	 WHEN age between 40 and 49 THEN '40-49'
-	 ELSE '50 and above'
-END AS age_group,
-CASE 
-    WHEN lifespan >= 12 AND total_sales > 5000 THEN 'VIP'
-    WHEN lifespan >= 12 AND total_sales <= 5000 THEN 'Regular'
-    ELSE 'New'
-END AS customer_segment,
-last_order_date,
-DATEDIFF(month, last_order_date, GETDATE()) AS recency,
-total_orders,
-total_sales,
-total_quantity,
-total_products
-lifespan,
--- Compuate average order value (AVO)
-CASE WHEN total_sales = 0 THEN 0
-	 ELSE total_sales / total_orders
-END AS avg_order_value,
--- Compuate average monthly spend
-CASE WHEN lifespan = 0 THEN total_sales
-     ELSE total_sales / lifespan
-END AS avg_monthly_spend
+	custmers_names,
+	age,
+	CASE 
+		WHEN age < 20 THEN 'under 20'
+		WHEN age BETWEEN 20 AND 29 THEN '20-29'
+		WHEN age BETWEEN 30 AND 39 THEN '30-39'
+		WHEN age BETWEEN 40 AND 49 THEN '40-49'
+		ELSE 'above 50'
+	END age_group ,
+	CASE 
+		WHEN lifespan > 12 AND total_sales > 5000 THEN 'Vip'
+		WHEN lifespan > 12 AND total_sales <= 5000 THEN 'Regular'
+		ELSE 'New'
+	END customer_segment,
+	first_order,
+	last_order ,
+	DATEDIFF(month,last_order,GETDATE()) AS recency,
+	lifespan,
+	total_order,
+	total_product,
+	total_quantity,
+	total_sales,
+	--compute average order value (AVO) 
+	CASE 
+		WHEN total_sales = 0 THEN 0
+		ELSE total_sales / total_order 
+	END AS avg_order_value ,
+	-- compute average monthly spend
+	CASE 
+		WHEN lifespan = 0 THEN total_sales
+		ELSE total_sales / lifespan 
+	END AS avg_month_spend 
 FROM customer_aggregation

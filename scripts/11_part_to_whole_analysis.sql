@@ -6,26 +6,41 @@ Purpose:
     - To compare performance or metrics across dimensions or time periods.
     - To evaluate differences between categories.
     - Useful for A/B testing or regional comparisons.
-
-SQL Functions Used:
-    - SUM(), AVG(): Aggregates values for comparison.
-    - Window Functions: SUM() OVER() for total calculations.
 ===============================================================================
 */
--- Which categories contribute the most to overall sales?
-WITH category_sales AS (
-    SELECT
-        p.category,
-        SUM(f.sales_amount) AS total_sales
-    FROM gold.fact_sales f
-    LEFT JOIN gold.dim_products p
-        ON p.product_key = f.product_key
-    GROUP BY p.category
-)
+
+-- which category contributed the most overall sales?
+WITH category_product AS (
+SELECT 	
+	category,
+	SUM(sales_amount)  AS totalsales
+FROM gold.dim_products p 
+RIGHT JOIN  gold.fact_sales s
+ON s.product_key = p.product_key
+GROUP BY category ) 
+
 SELECT
-    category,
-    total_sales,
-    SUM(total_sales) OVER () AS overall_sales,
-    ROUND((CAST(total_sales AS FLOAT) / SUM(total_sales) OVER ()) * 100, 2) AS percentage_of_total
-FROM category_sales
-ORDER BY total_sales DESC;
+	category,
+	totalsales,
+	SUM(totalsales) OVER() AS overall_sales , 
+	CONCAT(ROUND((CAST(totalsales AS FLOAT ) / SUM(totalsales) OVER()) * 100 ,2),'%')AS percentage
+FROM category_product ;
+
+------------------------------------
+--which category contributed the most overall order
+WITH order_product AS (
+SELECT 	
+	category,
+	COUNT(order_number)  AS totalorder
+FROM gold.dim_products p 
+RIGHT JOIN  gold.fact_sales s
+ON s.product_key = p.product_key
+GROUP BY category ) 
+
+SELECT
+	category,
+	totalorder,
+	SUM(totalorder) OVER() AS overall_order , 
+	CONCAT(ROUND((CAST(totalorder AS FLOAT ) / SUM(totalorder) OVER())*100 ,2),'%')AS percentage
+FROM order_product ;
+---------------------------------------------------------
